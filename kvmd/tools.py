@@ -44,14 +44,73 @@ def efmt(err: Exception) -> str:
     return f"{type(err).__name__}: {err}"
 
 
-# =====
-def merge(dest: dict, src: dict) -> None:
-    for key in src:
-        if key in dest:
-            if isinstance(dest[key], dict) and isinstance(src[key], dict):
-                merge(dest[key], src[key])
-                continue
-        dest[key] = src[key]
+def deep_merge(dest: dict, src: dict) -> None:
+    """
+    Merges source dictionary into destination dictionary recursively.
+
+    Args:
+        dest (dict): Destination dictionary to merge into.
+        src (dict): Source dictionary to merge.
+
+    Returns:
+        None
+    """
+    def merge_lists(dest: list, src: list) -> list:
+        result = dest.copy()
+        for item in src:
+            if isinstance(item, list):
+                if item not in result:
+                    result.append(item)
+            elif isinstance(item, dict):
+                for dest_item in result:
+                    if isinstance(dest_item, dict) and set(dest_item.keys()) == set(item.keys()):
+                        deep_merge(dest_item, item)
+                        break
+                else:
+                    result.append(item)
+            elif item not in result:
+                result.append(item)
+        return result
+
+    for key, value in src.items():
+        if key in dest and value is not None and dest[key] is not None:
+            if isinstance(dest[key], dict) and isinstance(value, dict):
+                deep_merge(dest[key], value)
+            elif isinstance(dest[key], list) and isinstance(value, list):
+                dest[key] = merge_lists(dest[key], value)
+        else:
+            dest[key] = value
+
+    def merge_lists(dest: list, src: list) -> list:
+        result = dest.copy()
+        for item in src:
+            if item not in result:
+                result.append(item)
+        return result
+
+
+def append(dest: dict, src: dict) -> None:
+    """
+    Appends new keys to the destination dictionary from the source dictionary.
+
+    Args:
+        dest: The destination dictionary to append to.
+        src: The source dictionary to append from.
+
+    Note:
+        This method only appends new keys to the destination dictionary. If a key already exists in the destination
+        dictionary, the corresponding value from the source dictionary will not be appended.
+
+    Example:
+        >>> dest = {'a': 1, 'b': 2}
+        >>> src = {'b': 3, 'c': 4}
+        >>> append(dest, src)
+        >>> print(dest)
+        {'a': 1, 'b': 2, 'c': 4}
+    """
+    for key, value in src.items():
+        if key not in dest:
+            dest[key] = value
 
 
 def rget(dct: dict, *keys: Hashable) -> dict:

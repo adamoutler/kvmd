@@ -34,7 +34,9 @@ class MergeStrategy(Enum):
     """Deep Merge Strategy will merge dictionaries and will append lists."""
     APPEND = ["append"]
     """Appends new values to dictionaries, adds new values to lists, but ignores existing non-dictionary keys."""
-
+    DISABLED = ["disabled", "disable"]
+    """ Disables the configuration """
+    
     @staticmethod
     def strategy_from_name(strategy_name: str) -> 'MergeStrategy':
         for strategy in MergeStrategy:
@@ -58,11 +60,13 @@ class MergeStrategy(Enum):
     def dict_handling(self, src: dict, dest: dict, file: str) -> None:
         """ Merges the source dictionary into the destination dictionary. """
         # strategy = MergeStrategy.get_strategy(src, strategy) # allow redefine strategy from any dictionary
-        if not isinstance(dest, dict):
+        if not isinstance(dest, dict) and not isinstance(self, MergeStrategy.MERGE):
             dest = {}
 
         for key, value in src.items():
             match self:
+                case MergeStrategy.DISABLED:
+                    continue
                 case MergeStrategy.DEEP_MERGE:
                     if isinstance(value, dict):  # dict inside dict
                         dest[key] = dest.get(key, {})
@@ -72,6 +76,12 @@ class MergeStrategy(Enum):
                         self.list_handling(value, dest[key], file)
                     else:
                         dest[key] = value
+                case MergeStrategy.MERGE:
+                    if key in dest:
+                        if isinstance(dest[key], dict) and isinstance(value, dict):
+                            self.dict_handling(value, dest[key], file)
+                            continue
+                    dest[key] = src[key]
                 case _:
                     if isinstance(value, dict):  # dict inside dict
                         if key not in dest:
@@ -88,6 +98,8 @@ class MergeStrategy(Enum):
     def list_handling(self, src: list, dest: list, file: str) -> None:
         """ Merges the source list into the destination list. """
         match self:
+            case MergeStrategy.DISABLED:
+                return
             case MergeStrategy.DEEP_MERGE:
                 self.deep_merge_list_handling(src, dest, file)
             case MergeStrategy.APPEND:

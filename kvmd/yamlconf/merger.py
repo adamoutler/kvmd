@@ -36,7 +36,7 @@ class MergeStrategy(Enum):
     """Appends new values to dictionaries, adds new values to lists, but ignores existing non-dictionary keys."""
     DISABLED = ["disabled", "disable"]
     """ Disables the configuration """
-    
+
     @staticmethod
     def strategy_from_name(strategy_name: str) -> 'MergeStrategy':
         for strategy in MergeStrategy:
@@ -47,8 +47,10 @@ class MergeStrategy(Enum):
     @staticmethod
     def get_strategy(src: dict, current_strategy: 'MergeStrategy') -> 'MergeStrategy':
         """Returns the merge strategy defined in the source dictionary or the current strategy."""
-        strategy_name = src.pop(STRATEGY_KEY, None)
-        return MergeStrategy.strategy_from_name(strategy_name) if strategy_name else current_strategy
+        if isinstance(src, dict):
+            strategy_name = src.pop(STRATEGY_KEY, None)
+            return MergeStrategy.strategy_from_name(strategy_name) if strategy_name else current_strategy
+        return current_strategy
 
     def merge(self, src: Union[dict, list], dest: Union[dict, list], file: str) -> None:
         """ Merges the source dictionary or list into the destination dictionary or list. """

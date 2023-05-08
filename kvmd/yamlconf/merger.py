@@ -73,30 +73,18 @@ class MergeStrategy(Enum):
                 case MergeStrategy.APPEND:
                     match value:
                         case dict():
-                            _append_dict_handler(dest, key, value, file)
+                            self._append_dict_handler(dest, key, value, file)
                         case list():
                             self.list_handling(value, dest[key], file)
                         case _:
                             self._append_value_handler(dest, key, value)
-
-    def list_handling(self, src: list, dest: list, file: str) -> None:
-        """ Merges the source list into the destination list. """
-        match self:
-            case MergeStrategy.DISABLED:
-                return
-            case MergeStrategy.DEEP_MERGE:
-                self.deep_merge_list_handling(src, dest, file)
-            case MergeStrategy.APPEND:
-                dest.extend(item for item in src if item not in dest)
-            case _:
-                dest = src
 
     def deep_merge_list_handling(self, src: list, dest: list, file: str) -> None:
         """ Handles list merging for the deep_merge strategy. """
         for item in src:
             if isinstance(item, dict):  # dict inside list
                 matching_keys = tuple(item.keys())
-                matching_index = dest_dict.get(matching_keys)
+                matching_index = dict.get(matching_keys)
                 if matching_index is None:
                     dest.append(item)
                     matching_index = len(dest) - 1

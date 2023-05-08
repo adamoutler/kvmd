@@ -54,48 +54,30 @@ class MergeStrategy(Enum):
 
     def merge(self, src: Union[dict, list], dest: Union[dict, list], file: str) -> None:
         """ Merges the source dictionary or list into the destination dictionary or list. """
-        if isinstance(src, list):
-            self.list_handling(src, dest, file)
-        else:
-            self.dict_handling(src, dest, file)
-
-    def dict_handling(self, src: dict, dest: dict, file: str) -> None:
-        """ Merges the source dictionary into the destination dictionary. """
-        # strategy = MergeStrategy.get_strategy(src, strategy) # allow redefine strategy from any dictionary
-        if not isinstance(dest, dict) and not isinstance(self, MergeStrategy.MERGE):
-            dest = {}
-
-        for key, value in src.items():
+        for (key, value) in src.items():
             match self:
                 case MergeStrategy.DISABLED:
                     continue
-                case MergeStrategy.DEEP_MERGE:
-                    if isinstance(value, dict):  # dict inside dict
-                        dest[key] = dest.get(key, {})
-                        self.dict_handling(value, dest[key], file)
-                    elif isinstance(value, list):  # list inside dict
-                        dest[key] = dest.get(key, [])
-                        self.list_handling(value, dest[key], file)
-                    else:
-                        dest[key] = value
                 case MergeStrategy.MERGE:
-                    if key in dest:
-                        if isinstance(dest[key], dict) and isinstance(value, dict):
-                            self.dict_handling(value, dest[key], file)
-                            continue
-                    dest[key] = src[key]
-                case _:
-                    if isinstance(value, dict):  # dict inside dict
-                        if key not in dest:
+                    self.merge_merge_strategy(key, value, src, dest, file)
+                case MergeStrategy.DEEP_MERGE:
+                    match value:
+                        case dict():
+                            dest[key] = dest.get(key, {})
+                            self.merge(value, dest[key], file)
+                        case list():
+                            dest[key] = dest.get(key, [])
+                            self.deep_merge_list_handling(value, dest[key], file)
+                        case _:
                             dest[key] = value
-                        self.merge(value, dest.get(key, {}), file)
-                    elif isinstance(value, list):  # list inside dict
-                        self.list_handling(value, dest[key], file)
-                    elif self != MergeStrategy.APPEND or (self == MergeStrategy.APPEND and key not in dest):
-                        dest[key] = value
-
-        # if isinstance(dest, dict) and bool(dest):  # TODO: This may need special handling due to the way drivers are loaded.
-        #     dest["_source_reference"] = file
+                case MergeStrategy.APPEND:
+                    match value:
+                        case dict():
+                            _append_dict_handler(dest, key, value, file)
+                        case list():
+                            self.list_handling(value, dest[key], file)
+                        case _:
+                            self._append_value_handler(dest, key, value)
 
     def list_handling(self, src: list, dest: list, file: str) -> None:
         """ Merges the source list into the destination list. """
@@ -111,7 +93,6 @@ class MergeStrategy(Enum):
 
     def deep_merge_list_handling(self, src: list, dest: list, file: str) -> None:
         """ Handles list merging for the deep_merge strategy. """
-        dest_dict = {tuple(existing_item.keys()): index for index, existing_item in enumerate(dest) if isinstance(existing_item, dict)}
         for item in src:
             if isinstance(item, dict):  # dict inside list
                 matching_keys = tuple(item.keys())
@@ -119,14 +100,28 @@ class MergeStrategy(Enum):
                 if matching_index is None:
                     dest.append(item)
                     matching_index = len(dest) - 1
-                self.dict_handling(item, dest[matching_index], file)
+                self.merge(item, dest[matching_index], file)
             elif isinstance(item, list):  # list inside list
                 new_list = []
-                self.list_handling(item, new_list, file)
+                self.deep_merge_list_handling(item, new_list, file)
                 dest.append(new_list)
             elif item not in dest:
                 dest.append(item)
 
+    def merge_merge_strategy(self, key, value, src, dest, file):
+        if key in dest:
+            if isinstance(dest[key], dict) and isinstance(value, dict):
+                self.merge(value, dest[key], file)
+                return
+        dest[key] = src[key]
+    
+    def _append_dict_handler(self, dest, key, value, file):
+        self._append_value_handler(dest, key, value)
+        self.merge(value, dest.get(key, {}), file)
+
+    def _append_value_handler(self, dest, key, value):
+        if key not in dest:
+            dest[key] = value
 # =====
 
 

@@ -10,7 +10,6 @@ async def test_no_merge_strategy() -> None:
     src: dict = {"a": "3", "b": "2", "c": [3, 4, 5, {"e": 6}]}
     merger.yaml_merge(dest, src)
     assert dest == {"a": "3", "b": "2", "c": [3, 4, 5, {"e": 6}]}
-    
 
 
 @pytest.mark.asyncio

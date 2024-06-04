@@ -24,21 +24,21 @@ set -e
 export LC_ALL=C
 
 if [ "$(whoami)" != root ]; then
-    echo "Only root can do that"
-    exit 1
+	echo "Only root can do that"
+	exit 1
 fi
 
 if [ "$1" != --do-the-thing ]; then
-    echo "This script will generate new self-signed SSL certificates for KVMD Nginx"
-    echo "and put them to /etc/kvmd/nginx/ssl. If you're sure of what you're doing,"
-    echo "append the option '--do-the-thing' to execute. You can also append --vnc"
-    echo "to generate a certificate for VNC not for Nginx."
-    exit 1
+	echo "This script will generate new self-signed SSL certificates for KVMD Nginx"
+	echo "and put them to /etc/kvmd/nginx/ssl. If you're sure of what you're doing,"
+	echo "append the option '--do-the-thing' to execute. You can also append --vnc"
+	echo "to generate a certificate for VNC not for Nginx."
+	exit 1
 fi
 
 target=nginx
 if [ "$2" == --vnc ]; then
-    target=vnc
+	target=vnc
 fi
 path="/etc/kvmd/$target/ssl"
 
@@ -46,10 +46,10 @@ serialnumber=$(cat /proc/cpuinfo | grep Serial | sed 's/.*\:\ //')
 san="DNS:pikvm-${serialnumber}.local"
 
 # Extract valid IP addresses
-ip_addresses=$(ip address | grep inet | awk '{print $2}' | sed 's:/.*::')
+ip_addresses=$(ip address | grep inet | awk '{print $2}' | sed 's:/.*::')|| echo "No IPs are currently assigned to PiKVM."
 
 for ip in $ip_addresses; do
-    san="${san},IP:${ip}"
+	san="${san},IP:${ip}"
 done
 
 set -x
